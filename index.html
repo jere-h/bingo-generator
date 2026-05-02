@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Random Bingo Sheet Generator</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #4b5563;
+      --accent: #6366f1;
+      --accent-strong: #4338ca;
+      --paper: #ffffff;
+      --pastel: #eef2ff;
+      --border: #dbeafe;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: #f8fafc;
+      font-family: "Space Grotesk", "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 32px;
+    }
+
+    header {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.5rem 1.4rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 200ms ease, box-shadow 200ms ease;
+      font-family: inherit;
+    }
+
+    button:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgba(99, 102, 241, 0.4);
+      outline-offset: 4px;
+    }
+
+    .pages {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .bingo-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 12px 14px 18px;
+      background: linear-gradient(180deg, #ffffff, #fdf9ff 60%, #f8f5ff);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent-strong);
+      letter-spacing: 0.05em;
+    }
+
+    .card-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .card-table th,
+    .card-table td {
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      text-align: center;
+      font-size: 1.35rem;
+      width: 20%;
+      padding: 10px 4px;
+    }
+
+    .card-table th {
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      background: var(--pastel);
+    }
+
+    .card-table td {
+      background: #ffffff;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .card-table td.free {
+      background: var(--accent);
+      color: white;
+      font-size: 0.95rem;
+      letter-spacing: 0.1em;
+      border: 1px solid var(--accent-strong);
+    }
+
+
+    footer {
+      margin-top: 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      max-width: 640px;
+    }
+
+    @media (max-width: 960px) {
+      body {
+        padding: 16px 12px 20px;
+      }
+      .page {
+        width: 100%;
+        padding: 18px;
+      }
+
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+      button {
+        width: 100%;
+        max-width: 320px;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+
+      header,
+      footer {
+        display: none;
+      }
+
+      .page {
+        box-shadow: none;
+        margin: 0;
+      }
+
+      .card-grid {
+        gap: 12px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <header>
+    <div class="controls">
+      <button id="regen">Generate New Sheets</button>
+    </div>
+  </header>
+  <main class="pages" id="pages"></main>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const columnRanges = [
+        { label: "B", min: 1, max: 15 },
+        { label: "I", min: 16, max: 30 },
+        { label: "N", min: 31, max: 45 },
+        { label: "G", min: 46, max: 60 },
+        { label: "O", min: 61, max: 75 },
+      ];
+
+      const cardsPerPage = 2;
+      const pagesContainer = document.getElementById("pages");
+      const regenButton = document.getElementById("regen");
+
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+
+      function sampleNumbers(min, max, count) {
+        const pool = [];
+        for (let i = min; i <= max; i++) {
+          pool.push(i);
+        }
+        shuffle(pool);
+        return pool.slice(0, count);
+      }
+
+      function generateCardNumbers() {
+        const grid = Array.from({ length: 5 }, () => Array(5).fill(null));
+        columnRanges.forEach((range, colIndex) => {
+          const needed = colIndex === 2 ? 4 : 5;
+          const picks = sampleNumbers(range.min, range.max, needed);
+          let pickIndex = 0;
+          for (let row = 0; row < 5; row++) {
+            if (row === 2 && colIndex === 2) {
+              grid[row][colIndex] = "FREE";
+              continue;
+            }
+            grid[row][colIndex] = picks[pickIndex++];
+          }
+        });
+        return grid;
+      }
+
+      function createCardElement(cardGrid, cardNumber) {
+        const card = document.createElement("article");
+        card.className = "bingo-card";
+
+        const table = document.createElement("table");
+        table.className = "card-table";
+
+        const body = document.createElement("tbody");
+        cardGrid.forEach((rowData) => {
+          const tr = document.createElement("tr");
+          rowData.forEach((cell) => {
+            const td = document.createElement("td");
+            if (cell === "FREE") {
+              td.className = "free";
+              td.textContent = "Free";
+            } else {
+              td.textContent = cell;
+            }
+            tr.appendChild(td);
+          });
+          body.appendChild(tr);
+        });
+
+        table.appendChild(body);
+        card.appendChild(table);
+        return card;
+      }
+
+      function renderPages() {
+        pagesContainer.innerHTML = "";
+        let cardCounter = 1;
+        const grid = document.createElement("div");
+        grid.className = "card-grid";
+        for (let i = 0; i < cardsPerPage; i++) {
+          const cardData = generateCardNumbers();
+          const cardEl = createCardElement(cardData, cardCounter++);
+          grid.appendChild(cardEl);
+        }
+        pagesContainer.appendChild(grid);
+      }
+
+      regenButton.addEventListener("click", () => {
+        renderPages();
+        window.scrollTo(0, 0);
+      });
+
+      renderPages();
+    });
+  </script>
+</body>
+</html>
